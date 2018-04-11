@@ -10,13 +10,16 @@ public class ChatClient {
         int uid = 0; // User ID
         try {
             server = new ServerSocket(port);
-            Connection[] connections = new Connection[20]; // Only handles 20 connections currently
+            ArrayList<Connection> connections = new ArrayList<Connection>(20);
+            Connection conn = null;
             while(true) {
-                System.out.println("Waiting for a connection on port: " + port);
+                System.out.println("Waiting for a connection on port: "+port);
                 Socket client = server.accept();
-                System.out.println("User " + (++uid) + " @ " +
-                    client.getInetAddress().toString() + " connected.");
-                new Connection(client,uid).start();
+                System.out.println("User "+(++uid)+" @ "
+                    +client.getInetAddress().toString()+" connected.");
+                conn = new Connection(client,uid,connections);
+                connections.add(conn);
+                conn.start();
             }
         } catch (IOException ex) {
             System.out.println("Error occured in socket creation.");
@@ -27,26 +30,49 @@ public class ChatClient {
 class Connection extends Thread {
     Socket client;
     int uid;
-    Connection(Socket new_client, int new_uid) {
+    ArrayList<Connection> connections = new ArrayList<Connection>(20);
+    PrintStream sout;
+    String u_name = "";
+    Connection(Socket new_client, int new_uid, ArrayList<Connection> new_conns) {
         client = new_client;
         uid = new_uid;
+        connections = new_conns;
+        try {
+            sout = new PrintStream(client.getOutputStream());
+        } catch (IOException ex) {
+            System.out.println("Error occured in PrintStream creation.");
+        }
     }
     public void run() {
         try {
             Scanner sin = new Scanner(client.getInputStream());
-            PrintStream sout = new PrintStream(client.getOutputStream());
-            sout.println("Connection recognized. Welcome!");
+            // PrintStream sout = new PrintStream(client.getOutputStream());
+            sout.println("Welcome! Please say your desired username. Type \"/quit\" to disconnect.");
             String line = "";
+            String message = "";
+            boolean set_name = false;
             while(!line.equals("/quit")) {
                 line = sin.nextLine();
-                System.out.println("User " + uid + " said: " + line);
-                sout.println("User " + uid + " said: " + line);
+                if(!set_name) { 
+                    u_name = line;
+                    set_name = true;
+                    System.out.println("User "+uid+" set name to: "+line);
+                }
+                else {
+                    message =  u_name+": "+line;
+                    this.send(message);
+                    for(int i = 0; i < connections.size(); i++) {
+                        if(i != uid-1) { connections.get(i).send(message); }
+                    }
+                    System.out.println("User "+uid+" ("+u_name+")"+" said: "+line);
+                }
             }
             client.close();
-            System.out.println("User " + uid + " @ " + 
-                client.getInetAddress().toString() + " disconnected.");
+            System.out.println("User "+uid+" @ "+client.getInetAddress().toString()+" disconnected.");
         } catch (IOException ex) {
             System.out.println("Error occured in scanner creation.");
         }
     }
+
+    public void send(String message) { sout.println(message); }
 }
