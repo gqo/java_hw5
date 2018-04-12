@@ -1,3 +1,5 @@
+// Graeme Ferguson | N19023160 | 04/11/18
+
 import java.io.*;
 import java.net.*;
 import java.util.*;
@@ -10,6 +12,7 @@ public class ChatClient {
         int uid = 0; // User ID
         try {
             server = new ServerSocket(port);
+            // Handles only n-set connections, consider HashMap?
             ArrayList<Connection> connections = new ArrayList<Connection>(20);
             Connection conn = null;
             while(true) {
@@ -33,6 +36,7 @@ class Connection extends Thread {
     ArrayList<Connection> connections = new ArrayList<Connection>(20);
     PrintStream sout;
     String u_name = "";
+
     Connection(Socket new_client, int new_uid, ArrayList<Connection> new_conns) {
         client = new_client;
         uid = new_uid;
@@ -43,15 +47,15 @@ class Connection extends Thread {
             System.out.println("Error occured in PrintStream creation.");
         }
     }
+    
     public void run() {
         try {
             Scanner sin = new Scanner(client.getInputStream());
-            // PrintStream sout = new PrintStream(client.getOutputStream());
-            sout.println("Welcome! Please say your desired username. Type \"/quit\" to disconnect.");
             String line = "";
             String message = "";
             boolean set_name = false;
-            while(!line.equals("/quit")) {
+
+            while(!line.equals("/quit")) { // User can quit by sending "/quit" on the server
                 line = sin.nextLine();
                 if(!set_name) { 
                     u_name = line;
@@ -61,14 +65,15 @@ class Connection extends Thread {
                 else {
                     message =  u_name+": "+line;
                     this.send(message);
-                    for(int i = 0; i < connections.size(); i++) {
+                    for(int i = 0; i < connections.size(); i++) { // Sends messag eto all users
                         if(i != uid-1) { connections.get(i).send(message); }
                     }
                     System.out.println("User "+uid+" ("+u_name+")"+" said: "+line);
                 }
             }
-            client.close();
             System.out.println("User "+uid+" @ "+client.getInetAddress().toString()+" disconnected.");
+            sin.close();
+            client.close();
         } catch (IOException ex) {
             System.out.println("Error occured in scanner creation.");
         }
