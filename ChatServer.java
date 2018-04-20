@@ -4,7 +4,7 @@ import java.io.*;
 import java.net.*;
 import java.util.*;
 
-public class ChatClient {
+public class ChatServer {
 
     static int port = 5190;
     public static void main(String[] args) {
@@ -21,12 +21,28 @@ public class ChatClient {
                 System.out.println("User "+(++uid)+" @ "
                     +client.getInetAddress().toString()+" connected.");
                 conn = new Connection(client,uid,connections);
-                connections.add(conn);
-                conn.start();
+                if(isPrune(conn,connections)) {
+                    uid--;
+                    System.out.println("Already connected user attempted to reconnect.");
+                }
+                else {
+                    connections.add(conn);
+                    conn.start();
+                }
             }
         } catch (IOException ex) {
             System.out.println("Error occured in socket creation.");
         }
+    }
+
+    public static boolean isPrune(Connection conn, ArrayList<Connection> connections) {
+        String ip = conn.getInetAddress();
+        for(int i = 0; i < connections.size(); i++) {
+            if(ip == connections.get(i).getInetAddress()) {
+                return true;
+            }
+        }
+        return false;
     }
 }
 
@@ -80,4 +96,5 @@ class Connection extends Thread {
     }
 
     public void send(String message) { sout.println(message); }
+    public String getInetAddress() { return client.getInetAddress().toString(); }
 }
